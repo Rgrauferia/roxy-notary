@@ -1,92 +1,72 @@
-# Roxy Notary™ – Versión Final para Grau Service LLC
-# Funciones: Firma digital, formularios legales, historial, email/WhatsApp, base de datos, imagen activa
-# Asistente IA: Roxy – Imagen visible, empresa activa
-
 import streamlit as st
+import datetime
+import base64
 from fpdf import FPDF
-from datetime import date, datetime
-from streamlit_drawable_canvas import st_canvas
 from tinydb import TinyDB, Query
-from PIL import Image
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
-from email.mime.text import MIMEText
-import io
 
-# Configuración de página
-st.set_page_config(page_title="Roxy Notary™ – Grau Service LLC", layout="centered")
+# ------------------ CONFIGURACIÓN INICIAL ------------------ #
+st.set_page_config(page_title="Roxy Notary™ | Grau Service LLC", layout="wide")
+st.title("🦁 Roxy Notary™ – Grau Service LLC")
+st.markdown("### 👩‍💼 Tu asistente notarial inteligente")
+db = TinyDB("historial_documentos.json")
 
-# Base de datos local
-db = TinyDB("roxy_notary_historial.json")
+# ------------------ FUNCIONES ------------------ #
+def generar_pdf(nombre_cliente, tipo_documento, contenido):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, contenido)
+    nombre_archivo = f"{tipo_documento.replace(' ', '_')}_{nombre_cliente.replace(' ', '_')}.pdf"
+    pdf.output(nombre_archivo)
+    return nombre_archivo
 
-# --- CABECERA VISUAL ---
-col1, col2 = st.columns([1, 8])
-with col1:
-    st.image("https://i.postimg.cc/15LrsMqT/roxy-avatar.png", width=65)
-with col2:
-    st.markdown("## 🦁 Roxy Notary™ – Grau Service LLC")
-    st.caption("Asistente notarial inteligente con visión del futuro · Florida · 📍")
+def guardar_en_historial(nombre_cliente, tipo_documento, contenido):
+    db.insert({
+        "cliente": nombre_cliente,
+        "documento": tipo_documento,
+        "contenido": contenido,
+        "fecha": str(datetime.datetime.now())
+    })
 
-# --- FORMULARIO DE CLIENTE ---
-st.subheader("📄 Crear documento notarial")
-nombre = st.text_input("Nombre completo del cliente")
-servicio = st.selectbox("Tipo de servicio", ["Affidavit", "Consentimiento", "Testimonio", "Contrato", "Otro"])
-comentarios = st.text_area("Detalles adicionales (opcional)")
-firmar = st.checkbox("¿Desea firmar el documento ahora?")
+def mostrar_historial():
+    st.subheader("📚 Historial de Documentos")
+    historial = db.all()
+    for doc in historial[::-1]:
+        with st.expander(f"{doc['fecha']} – {doc['cliente']} – {doc['documento']}"):
+            st.code(doc["contenido"])
 
-# --- LIENZO PARA FIRMA ---
-st.markdown("### ✍️ Firma digital del cliente")
-canvas_result = st_canvas(
-    fill_color="rgba(255, 255, 255, 0.0)",
-    stroke_width=2,
-    stroke_color="#000000",
-    background_color="#ffffff",
-    height=150,
-    width=400,
-    drawing_mode="freedraw",
-    key="firma"
-)
+# ------------------ FORMULARIO PRINCIPAL ------------------ #
+st.subheader("📝 Crear documento notarial")
 
-# --- BOTÓN PARA GUARDAR ---
-if st.button("✅ Generar documento"):
-    if nombre and servicio and canvas_result.image_data is not None:
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt=f"Documento Notarial - {servicio}", ln=True, align="C")
-        pdf.ln(10)
-        pdf.cell(200, 10, txt=f"Nombre del Cliente: {nombre}", ln=True)
-        pdf.cell(200, 10, txt=f"Servicio: {servicio}", ln=True)
-        pdf.multi_cell(200, 10, txt=f"Comentarios: {comentarios}", align="L")
-        pdf.cell(200, 10, txt=f"Fecha: {date.today()}", ln=True)
+nombre_cliente = st.text_input("Nombre del Cliente")
+tipo_documento = st.selectbox("Tipo de Documento", [
+    "Affidavit",
+    "Carta de Poder",
+    "Reclamación Familiar (I-130)",
+    "Notificación Legal",
+    "G-1145 Notificación USCIS",
+    "Otro"
+])
+contenido_documento = st.text_area("Contenido del documento")
 
-        # Guardar PDF temporalmente
-        pdf_output = io.BytesIO()
-        pdf.output(pdf_output)
-        pdf_output.seek(0)
-
-        # Guardar en base de datos
-        db.insert({
-            "nombre": nombre,
-            "servicio": servicio,
-            "comentarios": comentarios,
-            "fecha": str(date.today())
-        })
-
-        st.success("✅ Documento generado correctamente")
-        st.download_button("📥 Descargar PDF", data=pdf_output, file_name="documento_roxy.pdf")
-
+if st.button("✅ Generar Documento"):
+    if nombre_cliente and contenido_documento:
+        archivo_pdf = generar_pdf(nombre_cliente, tipo_documento, contenido_documento)
+        guardar_en_historial(nombre_cliente, tipo_documento, contenido_documento)
+        st.success(f"Documento '{tipo_documento}' generado para {nombre_cliente}")
+        with open(archivo_pdf, "rb") as f:
+            pdf_data = f.read()
+        b64 = base64.b64encode(pdf_data).decode()
+        href = f'<a href="data:application/pdf;base64,{b64}" download="{archivo_pdf}">📥 Descargar PDF</a>'
+        st.markdown(href, unsafe_allow_html=True)
     else:
-        st.warning("Completa los datos y realiza la firma para continuar.")
+        st.warning("Completa todos los campos.")
 
-# --- HISTORIAL ---
-st.markdown("---")
-st.subheader("📚 Historial de documentos")
-historial = db.all()
-for entry in historial[::-1][:5]:
-    st.markdown(f"• **{entry['nombre']}** – {entry['servicio']} ({entry['fecha']})")
+# ------------------ HISTORIAL ------------------ #
+mostrar_historial()
 
-# --- CONTACTO ---
+# ------------------ IDENTIDAD ------------------ #
 st.markdown("---")
-st.markdown("📧 Contacto: `roxy@grau360.com` · WhatsApp: [Click aquí](https://wa.me/12676344137)")
+st.image("https://i.imgur.com/2xjQk9j.png", width=100)  # Logo del león
+st.markdown("**Asistente Roxy Notary™ – powered by Grau Service LLC**")
+st.markdown("📧 roxy@grau360.com | 📞 267-634-4137")
