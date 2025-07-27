@@ -1,5 +1,5 @@
 streamlit
 fpdf
 Pillow
-streamlit-drawable-canvas
-tinydb
+requests
+PyPDF2
