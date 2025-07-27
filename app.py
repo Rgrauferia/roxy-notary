@@ -1,119 +1,95 @@
 import streamlit as st
-from fpdf import FPDF
-from datetime import datetime
-import os
 from PIL import Image
-from io import BytesIO
+import requests
 import base64
+import os
 
-# -------------------
-# CONFIGURACIÓN
-# -------------------
-st.set_page_config(page_title="Roxy Notary™", layout="wide")
-st.image("logo_grau_roxy.png", width=220)
-st.title("🖋️ Roxy Notary™ – Generador de Documentos Oficiales")
-st.markdown("**Asistente Notarial Inteligente de Grau Service LLC**")
-st.markdown("---")
+st.set_page_config(page_title="Roxy Notary™ – Grau Service LLC", layout="wide")
 
-# -------------------
-# FUNCIÓN PDF
-# -------------------
-class PDF(FPDF):
-    def header(self):
-        self.set_font('Arial', 'B', 12)
-        self.cell(0, 10, 'Grau Service LLC - Notary Services', 0, 1, 'C')
+# Mostrar logo desde URL
+logo_url = "https://grau360.s3.amazonaws.com/logo_grau_roxy.png"
+img = Image.open(requests.get(logo_url, stream=True).raw)
+st.image(img, width=200)
 
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('Arial', 'I', 8)
-        self.cell(0, 10, f'Página {self.page_no()}', 0, 0, 'C')
+st.title("📄 Roxy Notary™ – Documentos Oficiales Automatizados")
+st.markdown("Bienvenido a Roxy Notary™, tu asistente de confianza para generar formularios y documentos legales listos para firmar y enviar.")
 
-    def chapter_title(self, title):
-        self.set_font('Arial', 'B', 12)
-        self.cell(0, 10, title, ln=True, align='L')
-        self.ln(5)
+# ---------------------
+# Función para mostrar PDF oficial
+# ---------------------
+def mostrar_pdf(url_pdf):
+    pdf_display = f'<iframe src="{url_pdf}" width="100%" height="800" type="application/pdf"></iframe>'
+    st.markdown(pdf_display, unsafe_allow_html=True)
 
-    def chapter_body(self, body):
-        self.set_font('Arial', '', 12)
-        self.multi_cell(0, 10, body)
+# ---------------------
+# Menú principal
+# ---------------------
+formulario = st.selectbox("Selecciona el documento que deseas generar:", [
+    "Selecciona...",
+    "I-130 · Petición Familiar",
+    "I-130A · Información del Beneficiario",
+    "I-765 · Permiso de Trabajo",
+    "I-485 · Ajuste de Estatus",
+    "N-400 · Ciudadanía",
+    "I-90 · Renovación de Green Card"
+])
 
-# -------------------
-# FUNCIONES
-# -------------------
-def generar_pdf(nombre, datos):
-    pdf = PDF()
-    pdf.add_page()
-    pdf.chapter_title("Petición Familiar (Formulario I-130)")
-    pdf.chapter_body(datos)
-    
-    pdf_path = f"{nombre.replace(' ', '_')}_I130.pdf"
-    pdf.output(pdf_path)
-    return pdf_path
+st.divider()
 
-def descargar_pdf(file_path):
-    with open(file_path, "rb") as file:
-        btn = st.download_button(
-            label="📄 Descargar documento PDF",
-            data=file,
-            file_name=os.path.basename(file_path),
-            mime="application/pdf"
-        )
+# Mostrar PDF oficial según selección
+if formulario == "I-130 · Petición Familiar":
+    st.subheader("Formulario I-130 – Petición de Familiar Extranjero")
+    mostrar_pdf("https://www.uscis.gov/sites/default/files/document/forms/i-130.pdf")
+    st.download_button("⬇️ Descargar PDF", data=requests.get("https://www.uscis.gov/sites/default/files/document/forms/i-130.pdf").content, file_name="i-130.pdf")
 
-# -------------------
-# FORMULARIO I-130
-# -------------------
-st.header("📄 Petición Familiar – Formulario I-130")
-with st.form("form_i130"):
-    nombre = st.text_input("Nombre completo del solicitante")
-    direccion = st.text_input("Dirección del solicitante")
-    telefono = st.text_input("Teléfono")
-    nombre_familiar = st.text_input("Nombre del familiar beneficiario")
-    relacion = st.selectbox("Relación con el familiar", ["Esposo/a", "Padre/Madre", "Hijo/a", "Hermano/a"])
-    pais_origen = st.text_input("País de origen del beneficiario")
-    firma = st.text_input("Firma del solicitante (escríbela)")
+elif formulario == "I-130A · Información del Beneficiario":
+    st.subheader("Formulario I-130A – Información del Cónyuge")
+    mostrar_pdf("https://www.uscis.gov/sites/default/files/document/forms/i-130a.pdf")
+    st.download_button("⬇️ Descargar PDF", data=requests.get("https://www.uscis.gov/sites/default/files/document/forms/i-130a.pdf").content, file_name="i-130a.pdf")
 
-    enviar = st.form_submit_button("🖨️ Generar documento oficial")
+elif formulario == "I-765 · Permiso de Trabajo":
+    st.subheader("Formulario I-765 – Solicitud de Autorización de Empleo")
+    mostrar_pdf("https://www.uscis.gov/sites/default/files/document/forms/i-765.pdf")
+    st.download_button("⬇️ Descargar PDF", data=requests.get("https://www.uscis.gov/sites/default/files/document/forms/i-765.pdf").content, file_name="i-765.pdf")
 
-if enviar:
-    contenido = (
-        f"Nombre: {nombre}\n"
-        f"Dirección: {direccion}\n"
-        f"Teléfono: {telefono}\n"
-        f"Familiar: {nombre_familiar}\n"
-        f"Relación: {relacion}\n"
-        f"País de origen: {pais_origen}\n"
-        f"Firma: {firma}\n"
-        f"Fecha: {datetime.today().strftime('%d/%m/%Y')}"
-    )
-    pdf_generado = generar_pdf(nombre, contenido)
-    st.success("✅ Documento creado correctamente.")
-    descargar_pdf(pdf_generado)
+elif formulario == "I-485 · Ajuste de Estatus":
+    st.subheader("Formulario I-485 – Solicitud para Registrar Residencia Permanente")
+    mostrar_pdf("https://www.uscis.gov/sites/default/files/document/forms/i-485.pdf")
+    st.download_button("⬇️ Descargar PDF", data=requests.get("https://www.uscis.gov/sites/default/files/document/forms/i-485.pdf").content, file_name="i-485.pdf")
 
-# -------------------
-# PANEL ADICIONAL
-# -------------------
-st.markdown("---")
-st.subheader("⚙️ Funciones Avanzadas")
+elif formulario == "N-400 · Ciudadanía":
+    st.subheader("Formulario N-400 – Solicitud de Naturalización")
+    mostrar_pdf("https://www.uscis.gov/sites/default/files/document/forms/n-400.pdf")
+    st.download_button("⬇️ Descargar PDF", data=requests.get("https://www.uscis.gov/sites/default/files/document/forms/n-400.pdf").content, file_name="n-400.pdf")
 
-st.markdown("✅ Firma digital escrita a mano")
-st.markdown("✅ Guardado automático en historial (base de datos)")
-st.markdown("✅ Preparado para formularios oficiales (I-130, I-485, I-765, N-400, G-1145...)")
-st.markdown("✅ Preparado para modo kiosko desde iPad")
-st.markdown("✅ Revisión automática antes de generar")
-st.markdown("✅ Envío automático por correo y WhatsApp")
-st.markdown("✅ Logo oficial y branding activo")
+elif formulario == "I-90 · Renovación de Green Card":
+    st.subheader("Formulario I-90 – Reemplazo o Renovación de Tarjeta de Residente")
+    mostrar_pdf("https://www.uscis.gov/sites/default/files/document/forms/i-90.pdf")
+    st.download_button("⬇️ Descargar PDF", data=requests.get("https://www.uscis.gov/sites/default/files/document/forms/i-90.pdf").content, file_name="i-90.pdf")
 
-# -------------------
-# LOGO Y ROXY
-# -------------------
-st.sidebar.image("logo_grau_roxy.png", width=180)
-st.sidebar.markdown("**Grau Service LLC**")
-st.sidebar.markdown("Correo: roxy@grau360.com")
+# ---------------------
+# Firma digital (modo simple)
+# ---------------------
+st.divider()
+st.subheader("✍️ Firma digital del cliente")
+firma = st.text_input("Nombre para firmar:")
+if firma:
+    st.markdown(f"**Firma digital registrada:** {firma}")
 
-# -------------------
-# MODO AVANZADO (PRÓXIMOS)
-# -------------------
-st.sidebar.markdown("---")
-st.sidebar.markdown("📁 Próximos formularios: I-130A, I-485, I-765, N-400, I-864")
-st.sidebar.markdown("🧠 Módulo de seguimiento de casos: Activado")
-st.sidebar.markdown("📬 Notificación automática a cliente: Activado")
+# ---------------------
+# Botón para enviar por correo
+# ---------------------
+st.divider()
+st.subheader("📤 ¿Qué deseas hacer con este formulario?")
+col1, col2 = st.columns(2)
+with col1:
+    correo = st.text_input("Correo del cliente")
+with col2:
+    if st.button("Enviar por correo"):
+        st.success(f"Formulario enviado a {correo} (función simulada)")
+
+# ---------------------
+# Footer
+# ---------------------
+st.divider()
+st.markdown("© 2025 Roxy Notary™ · Grau Service LLC · Orlando, FL")
